@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Camera View</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #2d2d2d;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: absolute;
+        width: 200%;
+        height: 200%;
+        top: -50%;
+        left: -50%;
+        background: radial-gradient(
+          circle,
+          #ff6b6b,
+          #feca57,
+          #48dbfb,
+          #1dd1a1,
+          #5f27cd,
+          #ff9f43
+        );
+        background-size: 200% 200%;
+        animation: moveBackground 10s linear infinite;
+        z-index: -1;
+        filter: blur(50px);
+      }
+
+      @keyframes moveBackground {
+        0% {
+          background-position: 0% 0%;
+        }
+        50% {
+          background-position: 100% 100%;
+        }
+        100% {
+          background-position: 0% 0%;
+        }
+      }
+
+      .container {
+        display: flex;
+        width: 90%;
+        border-radius: 20px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(10px);
+        position: relative;
+        z-index: 1;
+      }
+
+      .camera-view {
+        flex: 7;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-right: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        position: relative;
+      }
+
+      .camera-view img {
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+        box-shadow: none;
+        transition: filter 0.3s, transform 0.3s;
+      }
+
+      .side-panel {
+        flex: 3;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        border-radius: 12px;
+        position: relative;
+      }
+
+      .side-panel h2 {
+        font-size: 24px;
+        margin: 0;
+        margin-bottom: 20px;
+        text-align: center;
+        width: 100%;
+      }
+
+      .side-panel p {
+        font-size: 18px;
+        margin: 5px 0;
+      }
+
+      .capture-button {
+        align-self: center;
+        padding: 15px 30px;
+        font-size: 18px;
+        font-weight: bold;
+        color: white;
+        background-color: #ff6b6b;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+        transition: background-color 0.3s, box-shadow 0.3s;
+        margin-top: 20px;
+      }
+
+      .capture-button:hover {
+        background-color: #ee5253;
+        box-shadow: 0 6px 15px rgba(255, 107, 107, 0.4);
+      }
+
+      .capture-button:active {
+        background-color: #ff9f43;
+        box-shadow: 0 4px 10px rgba(255, 159, 67, 0.3);
+      }
+
+      .settings {
+        margin-top: 30px;
+        width: 100%;
+      }
+
+      .settings h3 {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+
+      .settings label {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .settings input[type="range"] {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+
+      .logo {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 80px;
+        height: auto;
+      }
+
+      #popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 350px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        display: none;
+        animation: fadeIn 0.3s ease-in-out, fadeOut 0.5s ease-in-out 10s;
+        padding: 15px;
+        z-index: 9999;
+      }
+
+      #popup .icon {
+        font-size: 24px;
+        text-align: center;
+        color: #ffcc00;
+        padding: 15px;
+        width: 50px;
+        height: 50px;
+        margin-right: 15px;
+      }
+
+      #popup h3 {
+        margin: 0;
+        padding: 0;
+        font-size: 20px;
+        color: #333333;
+        font-weight: bold;
+      }
+
+      #popup p {
+        margin: 5px 0 0;
+        padding: 0;
+        font-size: 16px;
+        color: #666666;
+      }
+
+      .popup-content {
+        display: flex;
+        align-items: center;
+      }
+
+      .progress-bar {
+        height: 5px;
+        background-color: #ff6b6b;
+        border-radius: 5px;
+        width: 0;
+        margin-top: 10px;
+        animation: progress 10s linear forwards;
+      }
+
+      .detection-count {
+        margin-top: 10px;
+        font-size: 20px;
+        text-align: center;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        padding-top: 60px;
+      }
+
+      .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 300px;
+        text-align: center;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        animation: zoomIn 0.3s ease;
+      }
+
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      #passwordInput {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+
+      #togglePassword,
+      #submitPassword,
+      #cancelPassword {
+        margin: 5px;
+        padding: 10px 15px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s, box-shadow 0.3s;
+      }
+
+      #togglePassword {
+        background-color: #ddd;
+      }
+
+      #submitPassword {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      #submitPassword:hover {
+        background-color: #45a049;
+      }
+
+      #cancelPassword {
+        background-color: #f44336;
+        color: white;
+      }
+
+      #cancelPassword:hover {
+        background-color: #e31b0c;
+      }
+
+      #passwordError {
+        color: red;
+        display: none;
+        margin-top: 10px;
+      }
+      /* Style for the "View Image" link */
+      #lastImageLink {
+        color: #ff6b6b; /* Matches the button color */
+        text-decoration: none; /* Removes underline */
+        font-weight: bold;
+        transition: color 0.3s, transform 0.3s; /* Smooth transition for hover effect */
+      }
+
+      #lastImageLink:hover {
+        color: #ee5253; /* Slightly darker on hover */
+        transform: scale(1.1); /* Slightly enlarges on hover */
+        text-decoration: underline; /* Adds underline on hover */
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+      }
+
+      @keyframes progress {
+        from {
+          width: 0%;
+        }
+        to {
+          width: 100%;
+        }
+      }
+
+      @keyframes zoomIn {
+        from {
+          transform: scale(0);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="camera-view">
+        <img
+          id="cameraImage"
+          src="https://storage.googleapis.com/captureimage-38a12.appspot.com/images/camera_image.jpg?t=0"
+          alt="Ảnh từ camera"
+        />
+      </div>
+      <div class="side-panel">
+        <h2>CAMERA DETAILS</h2>
+        <p><strong>CAMERA BRAND:</strong> IPCAM HIKVISION</p>
+        <p><strong>DATE:</strong> <span id="datetime">--:--:--</span></p>
+        <p class="detection-count">
+          <strong>Detections Today: </strong><span id="detectionCount">0</span>
+        </p>
+        <p>
+          <strong>Last appearance time: </strong
+          ><span id="lastAppearanceTime">--:--:--</span>
+        </p>
+        <p>
+          <strong>Extract data: </strong>
+          <a
+            href="#"
+            id="lastImageLink"
+            target="_blank"
+            onclick="return showPasswordPrompt()"
+            >View Image</a
+          >
+        </p>
+
+        <!-- Password prompt modal -->
+        <div id="passwordModal" class="modal">
+          <div class="modal-content">
+            <span class="close" onclick="closePasswordPrompt()">&times;</span>
+            <h3>Enter Password</h3>
+            <input
+              type="password"
+              id="passwordInput"
+              placeholder="Enter password"
+            />
+            <button id="togglePassword" onclick="togglePasswordVisibility()">
+              👁️
+            </button>
+            <button id="submitPassword" onclick="checkPassword()">
+              Submit
+            </button>
+            <button id="cancelPassword" onclick="closePasswordPrompt()">
+              Cancel
+            </button>
+            <p id="passwordError">Incorrect password. Please try again.</p>
+          </div>
+        </div>
+
+        <button class="capture-button" id="captureButton">
+          TAKE A PICTURE
+        </button>
+
+        <div class="settings">
+          <h3>Image Settings</h3>
+
+          <label for="brightness">Brightness:</label>
+          <input
+            type="range"
+            id="brightness"
+            name="brightness"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value="1"
+          />
+
+          <label for="contrast">Contrast:</label>
+          <input
+            type="range"
+            id="contrast"
+            name="contrast"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value="1"
+          />
+
+          <label for="rotation">Rotation Angle:</label>
+          <input
+            type="range"
+            id="rotation"
+            name="rotation"
+            min="-180"
+            max="180"
+            step="1"
+            value="0"
+          />
+        </div>
+      </div>
+      <img src="logoEoh.png" alt="Company Logo" class="logo" />
+    </div>
+
+    <div id="popup">
+      <div class="popup-content">
+        <img src="human.png" alt="Human Presence" class="icon" />
+        <div>
+          <h3>CO NGUOI XUAT HIEN</h3>
+          <p>HE THONG DA CHUP ANH</p>
+        </div>
+      </div>
+      <div class="progress-bar"></div>
+    </div>
+
+    <input type="checkbox" id="humanCheckbox" style="display: none" />
+    <script src="https://www.unpkg.com/@eohjsc/era-widget@1.1.3/src/index.js"></script>
+    <script src="digestAuthRequest.js"></script>
+    <script>
+      let lastHumanDetectionValue = null;
+      let detectionCount =
+        parseInt(localStorage.getItem("detectionCount"), 10) || 0;
+      document.getElementById("detectionCount").textContent = detectionCount;
+
+      function captureImage() {
+        // URL của IPCAM cần thay đổi theo cấu hình của bạn
+        const cameraUrl =
+          "https://192.168.1.248/ISAPI/Streaming/channels/101/picture";
+
+        // Thông tin đăng nhập của camera
+        const username = "admin";
+        const password = "Eoh54321";
+
+        // Tạo đối tượng digest auth request
+        // Cú pháp theo thư viện digest-auth-request: new DigestAuthRequest(method, url, username, password)
+        var digestRequest = new DigestAuthRequest(
+          "GET",
+          cameraUrl,
+          username,
+          password
+        );
+
+        // Gửi request
+        digestRequest.request(
+          function (response) {
+            // response là dữ liệu nhị phân của ảnh (dạng ArrayBuffer hoặc string)
+            // Chuyển response thành Blob với type image/jpeg (thay đổi nếu cần)
+            var blob = new Blob([response], { type: "image/jpeg" });
+            const timestamp = new Date().getTime();
+            // Tạo URL từ Blob
+            var newImageUrl = URL.createObjectURL(blob);
+            var img = document.getElementById("cameraImage");
+            img.onload = function () {
+              updateLastAppearance(newImageUrl);
+            };
+            img.src = newImageUrl;
+          },
+          function (error) {
+            console.error("Digest auth request failed:", error);
+          }
+        );
+      }
+
+      function updateLastAppearance(imageUrl) {
+        lastImageUrl = imageUrl;
+        document.getElementById("lastImageLink").href = lastImageUrl;
+        const now = new Date();
+        document.getElementById("lastAppearanceTime").textContent =
+          now.toLocaleString();
+      }
+
+      function updateDateTime() {
+        const now = new Date();
+        const formattedDateTime =
+          now.toLocaleDateString("en-US") +
+          " " +
+          now.toLocaleTimeString("en-US", { hour12: false });
+        document.getElementById("datetime").textContent = formattedDateTime;
+      }
+      setInterval(updateDateTime, 1000);
+
+      document
+        .getElementById("captureButton")
+        .addEventListener("click", captureImage);
+
+      const eraWidget = new EraWidget();
+      let isHuman = null;
+      let noneHuman = null;
+      eraWidget.init({
+        onConfiguration: (configuration) => {
+          isHuman = configuration.actions[0];
+          noneHuman = configuration.actions[1];
+          console.log("Full configuration received:", configuration);
+          console.log(
+            "Using configuration for humanDetectionSensor with ID:",
+            config.id
+          );
+        },
+
+        onValues: (values) => {
+          console.log("Received values:", values);
+          if (values[config.id]) {
+            humanDetectionValue = values[config.id].value;
+            console.log("Received humanDetectionValue:", humanDetectionValue);
+
+            if (humanDetectionValue === 0 && lastHumanDetectionValue !== 0) {
+              console.log(
+                "Human detected (humanDetectionValue == 0). Taking a picture..."
+              );
+              captureImage();
+              showPopup();
+              updateDetectionCount();
+            }
+
+            lastHumanDetectionValue = humanDetectionValue;
+          } else {
+            console.log(
+              "No valid values received for humanDetectionSensor with ID:",
+              config.id
+            );
+          }
+        },
+      });
+
+      function showPopup() {
+        const popup = document.getElementById("popup");
+        popup.style.display = "block";
+
+        setTimeout(() => {
+          popup.style.display = "none";
+        }, 10000);
+      }
+
+      function updateDetectionCount() {
+        detectionCount++;
+        document.getElementById("detectionCount").textContent = detectionCount;
+        localStorage.setItem("detectionCount", detectionCount);
+      }
+
+      function resetDetectionCount() {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
+
+        // Kiểm tra nếu thời gian là 00:00:00 (nửa đêm)
+        if (hours === 0 && minutes === 0 && seconds === 0) {
+          detectionCount = 0;
+          localStorage.setItem("detectionCount", detectionCount);
+          document.getElementById("detectionCount").textContent =
+            detectionCount;
+          console.log("Detection count has been reset to 0 at midnight.");
+        }
+      }
+
+      // Kiểm tra mỗi giây để đảm bảo reset chính xác sau 24 giờ
+      setInterval(resetDetectionCount, 1000);
+      let lastImageUrl = ""; // This will hold the URL to the last image captured
+      let correctPassword = "eoh"; // Set your desired password here
+
+      function showPasswordPrompt() {
+        document.getElementById("passwordModal").style.display = "block";
+        return false; // Prevent the link from navigating
+      }
+
+      function closePasswordPrompt() {
+        document.getElementById("passwordModal").style.display = "none";
+        document.getElementById("passwordError").style.display = "none";
+        document.getElementById("passwordInput").value = ""; // Clear the input field
+      }
+
+      function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("passwordInput");
+        const type = passwordInput.type === "password" ? "text" : "password";
+        passwordInput.type = type;
+      }
+
+      function checkPassword() {
+        const enteredPassword = document.getElementById("passwordInput").value;
+        if (enteredPassword === correctPassword) {
+          closePasswordPrompt();
+          window.open(lastImageUrl, "_blank");
+        } else {
+          document.getElementById("passwordError").style.display = "block";
+        }
+      }
+      document
+        .getElementById("brightness")
+        .addEventListener("input", updateImageSettings);
+      document
+        .getElementById("contrast")
+        .addEventListener("input", updateImageSettings);
+      document
+        .getElementById("rotation")
+        .addEventListener("input", updateImageSettings);
+
+      function updateImageSettings() {
+        const brightness = document.getElementById("brightness").value;
+        const contrast = document.getElementById("contrast").value;
+        const rotation = document.getElementById("rotation").value;
+        const img = document.getElementById("cameraImage");
+        img.style.filter = `brightness(${brightness}) contrast(${contrast})`;
+        img.style.transform = `rotate(${rotation}deg)`;
+      }
+      setInterval(resetDetectionCount, 60000); // Check every minute
+    </script>
+  </body>
+</html>
